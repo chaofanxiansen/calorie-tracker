@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#F8F4ED">
+<title>热量账本 · 卡路里记录</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <div>
+        <h1>热量账本</h1>
+        <span class="brand-sub">Calorie Ledger</span>
+      </div>
+    </div>
+    <nav class="nav" id="nav">
+      <button class="nav-btn active" data-view="today">今日</button>
+      <button class="nav-btn" data-view="history">历史</button>
+      <button class="nav-btn" data-view="stats">统计</button>
+      <button class="nav-btn" data-view="settings">设置</button>
+    </nav>
+  </div>
+</header>
+
+<main class="container">
+
+  <!-- 今日视图 -->
+  <section class="view active" id="view-today">
+    <div class="today-head">
+      <h2 id="today-date">今日</h2>
+      <span class="tag" id="login-state-tag">未登录</span>
+    </div>
+
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric-label">摄入</div>
+        <div class="metric-value" id="m-intake">--</div>
+        <div class="metric-unit">kcal</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">消耗</div>
+        <div class="metric-value" id="m-burn">--</div>
+        <div class="metric-unit">kcal</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">净余额</div>
+        <div class="metric-value" id="m-net">--</div>
+        <div class="metric-unit">kcal</div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="panel">
+        <div class="panel-head">
+          <h3>饮食</h3>
+          <div class="panel-actions">
+            <button class="btn" id="btn-photo">拍照识别</button>
+            <button class="btn ghost" id="btn-manual-meal">手动添加</button>
+          </div>
+        </div>
+        <input type="file" id="photo-input" accept="image/*" capture="environment" hidden>
+        <div id="meal-list" class="record-list">
+          <p class="empty">今天还没有记录</p>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h3>运动</h3>
+          <div class="panel-actions">
+            <button class="btn ghost" id="btn-exercise">添加运动</button>
+          </div>
+        </div>
+        <div id="exercise-list" class="record-list">
+          <p class="empty">今天还没有运动</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 历史视图 -->
+  <section class="view" id="view-history">
+    <div class="today-head">
+      <h2>历史记录</h2>
+      <label class="month-picker">
+        <span>月份</span>
+        <input type="month" id="history-month">
+      </label>
+    </div>
+    <div id="history-list"></div>
+  </section>
+
+  <!-- 统计视图 -->
+  <section class="view" id="view-stats">
+    <div class="today-head">
+      <h2>近两周趋势</h2>
+    </div>
+    <div class="panel">
+      <div id="chart-wrap"></div>
+      <div class="chart-legend">
+        <span class="legend-dot intake"></span>摄入
+        <span class="legend-dot burn"></span>消耗
+      </div>
+    </div>
+    <div class="panel stat-notes" id="stat-notes"></div>
+  </section>
+
+  <!-- 设置视图 -->
+  <section class="view" id="view-settings">
+    <h2>账户</h2>
+    <div class="panel" id="account-panel"></div>
+
+    <h2>大模型识别</h2>
+    <div class="panel form-panel">
+      <label>接口地址
+        <input type="text" id="cfg-ai-url" placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1">
+      </label>
+      <label>模型名称
+        <input type="text" id="cfg-ai-model" placeholder="qwen-vl-max">
+      </label>
+      <label>API Key
+        <input type="password" id="cfg-ai-key" placeholder="sk-...">
+      </label>
+      <div class="form-row">
+        <button class="btn" id="btn-test-ai">测试识别接口</button>
+        <span class="form-hint" id="ai-test-result"></span>
+      </div>
+    </div>
+
+    <h2>云端存储</h2>
+    <div class="panel form-panel">
+      <label>Supabase 项目 URL
+        <input type="text" id="cfg-sb-url" placeholder="https://xxxx.supabase.co">
+      </label>
+      <label>publishable key（sb_publishable_...）
+        <input type="password" id="cfg-sb-key" placeholder="sb_publishable_...">
+      </label>
+      <div class="form-row">
+        <button class="btn" id="btn-test-sb">测试云端连接</button>
+        <span class="form-hint" id="sb-test-result"></span>
+      </div>
+    </div>
+
+    <h2>个人参数</h2>
+    <div class="panel form-panel">
+      <label>体重（kg，用于运动消耗估算）
+        <input type="number" id="cfg-weight" placeholder="70" min="30" max="250" step="0.5">
+      </label>
+    </div>
+
+    <h2>导出与备份</h2>
+    <div class="panel form-panel">
+      <label>导出月份
+        <input type="month" id="export-month">
+      </label>
+      <div class="form-row">
+        <button class="btn" id="btn-export-excel">导出 Excel</button>
+        <button class="btn ghost" id="btn-export-json">备份 JSON</button>
+      </div>
+      <p class="form-hint">Excel 包含「每日明细」与「每日汇总」两个工作表，可直接用 Excel 或 WPS 打开。</p>
+    </div>
+  </section>
+
+</main>
+
+<!-- 拍照识别结果弹层 -->
+<div class="overlay hidden" id="overlay-ai">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h3 id="ai-sheet-title">识别结果</h3>
+      <button class="btn ghost" id="btn-ai-close">关闭</button>
+    </div>
+    <div id="ai-sheet-body"></div>
+    <div class="sheet-foot">
+      <span class="form-hint" id="ai-sheet-total"></span>
+      <button class="btn primary" id="btn-ai-confirm">确认入账</button>
+    </div>
+  </div>
+</div>
+
+<!-- 手动添加饮食弹层 -->
+<div class="overlay hidden" id="overlay-meal">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h3>手动添加饮食</h3>
+      <button class="btn ghost" id="btn-meal-close">关闭</button>
+    </div>
+    <div class="sheet-body form-panel">
+      <label>餐次
+        <select id="meal-type">
+          <option value="早餐">早餐</option>
+          <option value="午餐">午餐</option>
+          <option value="晚餐">晚餐</option>
+          <option value="加餐">加餐</option>
+        </select>
+      </label>
+      <label>食物名称
+        <input type="text" id="meal-name" placeholder="如：鸡胸肉沙拉">
+      </label>
+      <label>卡路里（kcal）
+        <input type="number" id="meal-kcal" placeholder="350" min="0" step="1">
+      </label>
+      <label>备注（可选）
+        <input type="text" id="meal-note" placeholder="如：约 200g">
+      </label>
+    </div>
+    <div class="sheet-foot">
+      <button class="btn primary" id="btn-meal-save">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 添加运动弹层 -->
+<div class="overlay hidden" id="overlay-exercise">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h3>添加运动</h3>
+      <button class="btn ghost" id="btn-ex-close">关闭</button>
+    </div>
+    <div class="sheet-body form-panel">
+      <label>运动类型
+        <select id="ex-type"></select>
+      </label>
+      <label>时长（分钟）
+        <input type="number" id="ex-minutes" placeholder="30" min="1" step="1">
+      </label>
+      <div class="calc-preview" id="ex-preview"></div>
+    </div>
+    <div class="sheet-foot">
+      <button class="btn primary" id="btn-ex-save">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 登录弹层 -->
+<div class="overlay hidden" id="overlay-auth">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h3 id="auth-title">登录</h3>
+      <button class="btn ghost" id="btn-auth-close">关闭</button>
+    </div>
+    <div class="sheet-body form-panel">
+      <label>邮箱
+        <input type="email" id="auth-email" placeholder="you@example.com">
+      </label>
+      <label>密码
+        <input type="password" id="auth-pass" placeholder="至少 6 位">
+      </label>
+      <div class="form-row">
+        <button class="btn primary" id="btn-auth-submit">登录</button>
+        <button class="btn ghost" id="btn-auth-toggle">没有账号？注册</button>
+      </div>
+      <p class="form-hint" id="auth-msg"></p>
+    </div>
+  </div>
+</div>
+
+<div class="toast hidden" id="toast"></div>
+
+<script src="js/met.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/store.js"></script>
+<script src="js/xlsx.js"></script>
+<script src="js/export.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

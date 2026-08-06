@@ -1,0 +1,218 @@
+/* 存储层：Supabase（PostgREST + Auth）直连，零 SDK 依赖。
+   未配置或未登录时自动降级为浏览器本地存储，保证功能始终可用。 */
+
+const Store = (function () {
+
+  const CFG_KEY = 'calorie.sb.cfg';
+  const SES_KEY = 'calorie.sb.session';
+  const LOCAL_KEY = 'calorie.local.records';
+  const LOCAL_ID_PREFIX = 'local-';
+
+  let onAuthChange = null;
+
+  function cfg() {
+    let c = {};
+    try { c = JSON.parse(localStorage.getItem(CFG_KEY) || '{}'); } catch (e) { c = {}; }
+    return { url: c.url || '', key: c.key || '' };
+  }
+
+  function saveCfg(c) { localStorage.setItem(CFG_KEY, JSON.stringify(c)); }
+
+  function session() {
+    try { return JSON.parse(localStorage.getItem(SES_KEY) || 'null'); } catch (e) { return null; }
+  }
+
+  function saveSession(s) {
+    if (s) localStorage.setItem(SES_KEY, JSON.stringify(s));
+    else localStorage.removeItem(SES_KEY);
+  }
+
+  function isCloudReady() {
+    const c = cfg();
+    return !!(c.url && c.key);
+  }
+
+  function currentUser() {
+    const s = session();
+    return s && s.user ? s.user : null;
+  }
+
+  function notify() { if (onAuthChange) onAuthChange(currentUser()); }
+
+  function setOnAuthChange(fn) { onAuthChange = fn; }
+
+  function headers(extra) {
+    const c = cfg();
+    return Object.assign({
+      'apikey': c.key,
+      'Content-Type': 'application/json',
+    }, extra || {});
+  }
+
+  function authHeaders() {
+    const s = session();
+    return headers(s && s.access_token ? { 'Authorization': 'Bearer ' + s.access_token } : {});
+  }
+
+  /* ---------- Auth ---------- */
+
+  async function signup(email, password) {
+    const c = cfg();
+    if (!isCloudReady()) throw new Error('请先配置 Supabase URL 和 anon key');
+    const res = await fetch(c.url.replace(/\/+$/, '') + '/auth/v1/signup', {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.msg || data.error_description || data.error || '注册失败');
+    if (data.access_token) {
+      saveSession({ access_token: data.access_token, refresh_token: data.refresh_token, user: data.user });
+      notify();
+    }
+    return data;
+  }
+
+  async function signin(email, password) {
+    const c = cfg();
+    if (!isCloudReady()) throw new Error('请先配置 Supabase URL 和 anon key');
+    const res = await fetch(c.url.replace(/\/+$/, '') + '/auth/v1/token?grant_type=password', {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.msg || data.error_description || data.error || '登录失败');
+    saveSession({ access_token: data.access_token, refresh_token: data.refresh_token, user: data.user });
+    notify();
+    return data;
+  }
+
+  async function signout() {
+    const c = cfg();
+    const s = session();
+    if (c.url && s && s.access_token) {
+      try {
+        await fetch(c.url.replace(/\/+$/, '') + '/auth/v1/logout', {
+          method: 'POST',
+          headers: authHeaders(),
+        });
+      } catch (e) { /* 忽略登出请求失败 */ }
+    }
+    saveSession(null);
+    notify();
+  }
+
+  /* ---------- 本地存储兜底 ---------- */
+
+  function localAll() {
+    try { return JSON.parse(localStorage.getItem(LOCAL_KEY) || '[]'); } catch (e) { return []; }
+  }
+
+  function localSave(list) { localStorage.setItem(LOCAL_KEY, JSON.stringify(list)); }
+
+  function genLocalId() {
+    return LOCAL_ID_PREFIX + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+  }
+
+  /* ---------- 统一数据接口 ---------- */
+
+  async function listRecords(dateStr) {
+    if (isCloudReady() && currentUser()) return cloudList([{ field: 'record_date', op: 'eq', value: dateStr }]);
+    return localAll().filter(r => r.record_date === dateStr);
+  }
+
+  async function listMonth(monthStr) {
+    const parts = monthStr.split('-').map(Number);
+    const endY = parts[1] === 12 ? parts[0] + 1 : parts[0];
+    const endM = parts[1] === 12 ? 1 : parts[1] + 1;
+    const end = endY + '-' + String(endM).padStart(2, '0') + '-01';
+    const start = monthStr + '-01';
+    if (isCloudReady() && currentUser()) {
+      return cloudList([
+        { field: 'record_date', op: 'gte', value: start },
+        { field: 'record_date', op: 'lt', value: end },
+      ]);
+    }
+    return localAll().filter(r => r.record_date >= start && r.record_date < end);
+  }
+
+  async function cloudList(filters) {
+    const c = cfg();
+    const params = ['select=*'];
+    for (const f of filters) params.push(f.field + '=' + f.op + '.' + encodeURIComponent(f.value));
+    params.push('order=created_at.asc');
+    const url = c.url.replace(/\/+$/, '') + '/rest/v1/records?' + params.join('&');
+    const res = await fetch(url, { headers: authHeaders() });
+    if (!res.ok) throw new Error('云端查询失败 HTTP ' + res.status);
+    return res.json();
+  }
+
+  async function addRecords(records) {
+    if (isCloudReady() && currentUser()) {
+      const c = cfg();
+      const url = c.url.replace(/\/+$/, '') + '/rest/v1/records';
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: Object.assign(authHeaders(), { 'Prefer': 'return=representation' }),
+        body: JSON.stringify(records),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body.message) || ('云端保存失败 HTTP ' + res.status));
+      }
+      return res.json();
+    }
+    const list = localAll();
+    const saved = records.map(r => Object.assign({}, r, {
+      id: r.id || genLocalId(),
+      user_id: null,
+      created_at: r.created_at || new Date().toISOString(),
+    }));
+    localSave(list.concat(saved));
+    return saved;
+  }
+
+  async function deleteRecord(id) {
+    if (String(id).startsWith(LOCAL_ID_PREFIX) || !(isCloudReady() && currentUser())) {
+      localSave(localAll().filter(r => r.id !== id));
+      return;
+    }
+    const c = cfg();
+    const url = c.url.replace(/\/+$/, '') + '/rest/v1/records?id=eq.' + encodeURIComponent(id);
+    const res = await fetch(url, { method: 'DELETE', headers: authHeaders() });
+    if (!res.ok) throw new Error('删除失败 HTTP ' + res.status);
+  }
+
+  /* 登录后把本地记录合并上云（幂等：云端已有同 日期+类型+名称+kcal 则跳过） */
+  async function mergeLocalToCloud() {
+    if (!(isCloudReady() && currentUser())) return 0;
+    const local = localAll();
+    if (!local.length) return 0;
+
+    const cloud = await cloudList([]); /* 全量拉取做去重 */
+    const seen = new Set(cloud.map(r => [r.record_date, r.type, r.name, r.kcal].join('|')));
+
+    const toUpload = local.filter(r => !seen.has([r.record_date, r.type, r.name, r.kcal].join('|')));
+    if (toUpload.length) {
+      await addRecords(toUpload.map(r => ({
+        record_date: r.record_date,
+        type: r.type,
+        meal: r.meal || null,
+        name: r.name,
+        kcal: r.kcal,
+        detail: r.detail || {},
+      })));
+    }
+    localSave([]);
+    return toUpload.length;
+  }
+
+  return {
+    cfg, saveCfg, isCloudReady, currentUser,
+    setOnAuthChange,
+    signup, signin, signout,
+    listRecords, listMonth, addRecords, deleteRecord,
+    mergeLocalToCloud,
+  };
+})();
