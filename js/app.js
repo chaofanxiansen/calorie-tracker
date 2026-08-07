@@ -29,6 +29,35 @@
     return isNaN(w) || w < 30 ? 70 : w;
   }
 
+  /* 根据当前时间自动选择餐次 */
+  function getMealByTime() {
+    const hour = new Date().getHours();
+    if (hour >= 6 && hour <= 10) return '早餐';
+    if (hour >= 11 && hour <= 14) return '午餐';
+    if (hour >= 15 && hour <= 20) return '晚餐';
+    return '宵夜'; // 21-5点
+  }
+
+  /* 计算基础代谢率 BMR（Mifflin-St Jeor 公式） */
+  function calcBMR() {
+    const gender = localStorage.getItem('calorie.gender') || 'male';
+    const age = parseInt(localStorage.getItem('calorie.age') || '25');
+    const height = parseFloat(localStorage.getItem('calorie.height') || '170');
+    const weight = getWeight();
+    if (isNaN(age) || isNaN(height) || age < 10 || height < 100) return 0;
+    let bmr = 10 * weight + 6.25 * height - 5 * age;
+    bmr += (gender === 'male') ? 5 : -161;
+    return Math.round(bmr);
+  }
+
+  /* 计算每日总能量消耗 TDEE（BMR × 活动系数） */
+  function calcTDEE() {
+    const bmr = calcBMR();
+    if (bmr === 0) return 0;
+    const activity = parseFloat(localStorage.getItem('calorie.activity') || '1.2'); // 默认久坐
+    return Math.round(bmr * activity);
+  }
+
   let toastTimer = null;
   function toast(msg) {
     const el = $('toast');
@@ -105,12 +134,14 @@
     const intake = records.filter(r => r.type === 'meal').reduce((s, r) => s + Number(r.kcal), 0);
     const burn = records.filter(r => r.type === 'exercise').reduce((s, r) => s + Number(r.kcal), 0);
     const net = intake - burn;
+    const tdee = calcTDEE();
 
     $('m-intake').textContent = intake;
     $('m-burn').textContent = burn;
     const netEl = $('m-net');
     netEl.textContent = (net > 0 ? '+' : '') + net;
     netEl.className = 'metric-value' + (net > 0 ? ' positive' : net < 0 ? ' negative' : '');
+    $('m-tdee').textContent = tdee || '--';
 
     /* 饮食列表，按餐次分组 */
     const meals = records.filter(r => r.type === 'meal');
@@ -190,10 +221,13 @@
       $('photo-input').click();
     });
 
+    $('btn-ai-close').addEventListener('click', () => hideOverlay('overlay-ai'));
+
     $('photo-input').addEventListener('change', async e => {
       const file = e.target.files && e.target.files[0];
       if (!file) return;
       const body = $('ai-sheet-body');
+      state.aiMeal = getMealByTime(); // 自动根据时间选择餐次
       $('ai-sheet-title').textContent = '识别中…';
       body.innerHTML = '<div class="ai-loading">正在分析食物，请稍候</div>';
       $('ai-sheet-total').textContent = '';
@@ -275,6 +309,7 @@
       $('meal-name').value = '';
       $('meal-kcal').value = '';
       $('meal-note').value = '';
+      $('meal-type').value = getMealByTime(); // 自动根据时间选择餐次
       showOverlay('overlay-meal');
     });
     $('btn-meal-close').addEventListener('click', () => hideOverlay('overlay-meal'));
@@ -459,6 +494,9 @@
     $('cfg-sb-url').value = sb.url;
     $('cfg-sb-key').value = sb.key;
 
+    $('cfg-gender').value = localStorage.getItem('calorie.gender') || 'male';
+    $('cfg-age').value = localStorage.getItem('calorie.age') || '25';
+    $('cfg-height').value = localStorage.getItem('calorie.height') || '170';
     $('cfg-weight').value = getWeight();
     $('export-month').value = monthStrOf(todayStr());
   }
@@ -472,7 +510,23 @@
 
     $('cfg-weight').addEventListener('change', e => {
       const w = parseFloat(e.target.value);
-      if (w >= 30 && w <= 250) { localStorage.setItem('calorie.weight', w); toast('体重已保存'); }
+      if (w >= 30 && w <= 250) { localStorage.setItem('calorie.weight', w); toast('体重已保存'); loadToday(); }
+    });
+
+    $('cfg-gender').addEventListener('change', e => {
+      localStorage.setItem('calorie.gender', e.target.value);
+      toast('性别已保存');
+      loadToday();
+    });
+
+    $('cfg-age').addEventListener('change', e => {
+      const age = parseInt(e.target.value);
+      if (age >= 10 && age <= 120) { localStorage.setItem('calorie.age', age); toast('年龄已保存'); loadToday(); }
+    });
+
+    $('cfg-height').addEventListener('change', e => {
+      const h = parseFloat(e.target.value);
+      if (h >= 100 && h <= 250) { localStorage.setItem('calorie.height', h); toast('身高已保存'); loadToday(); }
     });
 
     $('btn-test-ai').addEventListener('click', async () => {
