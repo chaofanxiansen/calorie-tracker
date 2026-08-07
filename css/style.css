@@ -211,6 +211,14 @@ a:hover { color: var(--accent-hover); text-decoration-color: currentColor; }
 }
 .record-del:hover { color: var(--danger); background: rgba(139,58,58,.06); }
 
+.record-edit {
+  border: none; background: transparent;
+  color: var(--ink-3); cursor: pointer;
+  font-size: .9rem; padding: 2px 6px; border-radius: 3px;
+  font-family: var(--ui);
+}
+.record-edit:hover { color: var(--accent); background: var(--accent-soft); }
+
 .meal-tag {
   display: inline-flex; padding: 1px 7px; font-size: .72rem; font-weight: 500;
   border-radius: 4px; background: var(--accent-soft); color: var(--accent-hover);

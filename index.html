@@ -279,6 +279,43 @@
   </div>
 </div>
 
+<!-- 编辑记录弹层 -->
+<div class="overlay hidden" id="overlay-edit">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h3>编辑记录</h3>
+      <button class="btn ghost" id="btn-edit-close">关闭</button>
+    </div>
+    <div class="sheet-body form-panel">
+      <label>日期
+        <input type="date" id="edit-date">
+      </label>
+      <label>餐次（仅饮食）
+        <select id="edit-meal">
+          <option value="">--</option>
+          <option value="早餐">早餐</option>
+          <option value="午餐">午餐</option>
+          <option value="晚餐">晚餐</option>
+          <option value="宵夜">宵夜</option>
+          <option value="零食">零食</option>
+        </select>
+      </label>
+      <label>名称
+        <input type="text" id="edit-name">
+      </label>
+      <label>卡路里（kcal）
+        <input type="number" id="edit-kcal" min="0" step="1">
+      </label>
+      <label>分量/备注
+        <input type="text" id="edit-portion" placeholder="如：200g">
+      </label>
+    </div>
+    <div class="sheet-foot">
+      <button class="btn primary" id="btn-edit-save">保存</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast hidden" id="toast"></div>
 
 <script src="js/met.js"></script>

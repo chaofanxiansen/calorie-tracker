@@ -190,7 +190,9 @@
       (meta ? '<div class="record-meta">' + esc(meta) + '</div>' : '') +
       '</div>' +
       '<div class="record-kcal' + (r.type === 'exercise' ? ' exercise' : '') + '">' + Number(r.kcal) + '</div>' +
+      '<button class="record-edit" title="编辑" aria-label="编辑">✎</button>' +
       '<button class="record-del" title="删除" aria-label="删除">×</button>';
+    row.querySelector('.record-edit').addEventListener('click', () => openEdit(r));
     row.querySelector('.record-del').addEventListener('click', async () => {
       if (!confirm('删除这条记录？')) return;
       try {
@@ -207,6 +209,53 @@
     const d = document.createElement('div');
     d.textContent = s == null ? '' : String(s);
     return d.innerHTML;
+  }
+
+  /* ---------- 编辑记录 ---------- */
+  let editingRecord = null;
+
+  function openEdit(r) {
+    editingRecord = r;
+    $('edit-date').value = String(r.record_date).slice(0, 10);
+    $('edit-meal').value = r.meal || '';
+    $('edit-name').value = r.name;
+    $('edit-kcal').value = r.kcal;
+    $('edit-portion').value = (r.detail && r.detail.portion) || '';
+    showOverlay('overlay-edit');
+  }
+
+  function bindEdit() {
+    $('btn-edit-close').addEventListener('click', () => hideOverlay('overlay-edit'));
+    $('btn-edit-save').addEventListener('click', async () => {
+      if (!editingRecord) return;
+      const updates = {
+        record_date: $('edit-date').value,
+        name: $('edit-name').value.trim(),
+        kcal: Math.round(Number($('edit-kcal').value) || 0),
+      };
+      if (editingRecord.type === 'meal') {
+        updates.meal = $('edit-meal').value || null;
+      }
+      const detail = editingRecord.detail || {};
+      detail.portion = $('edit-portion').value.trim();
+      updates.detail = detail;
+
+      if (!updates.name || !(updates.kcal >= 0)) {
+        toast('请填写名称和有效卡路里');
+        return;
+      }
+
+      try {
+        await Store.updateRecord(editingRecord.id, updates);
+        toast('已更新');
+        hideOverlay('overlay-edit');
+        editingRecord = null;
+        loadToday();
+        loadHistory();
+      } catch (e) {
+        toast(e.message);
+      }
+    });
   }
 
   /* ---------- 拍照识别 ---------- */
@@ -682,6 +731,7 @@
     bindExercise();
     bindSettings();
     bindAuth();
+    bindEdit();
     loadConfigForms();
 
     $('history-month').value = state.historyMonth;

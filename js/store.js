@@ -56,6 +56,25 @@ const Store = (function () {
 
   /* ---------- Auth ---------- */
 
+  async function refreshToken() {
+    const c = cfg();
+    const s = session();
+    if (!s || !s.refresh_token) return false;
+    try {
+      const res = await fetch(c.url.replace(/\/+$/, '') + '/auth/v1/token?grant_type=refresh_token', {
+        method: 'POST',
+        headers: headers(),
+        body: JSON.stringify({ refresh_token: s.refresh_token }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.access_token) {
+        saveSession({ access_token: data.access_token, refresh_token: data.refresh_token || s.refresh_token, user: s.user });
+        return true;
+      }
+    } catch (e) { /* ignore */ }
+    return false;
+  }
+
   async function signup(email, password) {
     const c = cfg();
     if (!isCloudReady()) throw new Error('请先配置 Supabase URL 和 anon key');
@@ -86,6 +105,12 @@ const Store = (function () {
     saveSession({ access_token: data.access_token, refresh_token: data.refresh_token, user: data.user });
     notify();
     return data;
+  }
+
+  async function ensureAuth() {
+    if (!currentUser()) return false;
+    // 检查 token 是否即将过期（简单策略：每次请求前尝试 refresh）
+    return await refreshToken();
   }
 
   async function signout() {
@@ -143,6 +168,7 @@ const Store = (function () {
     for (const f of filters) params.push(f.field + '=' + f.op + '.' + encodeURIComponent(f.value));
     params.push('order=created_at.asc');
     const url = c.url.replace(/\/+$/, '') + '/rest/v1/records?' + params.join('&');
+    await ensureAuth(); // 确保 token 有效
     const res = await fetch(url, { headers: authHeaders() });
     if (!res.ok) throw new Error('云端查询失败 HTTP ' + res.status);
     return res.json();
@@ -152,6 +178,7 @@ const Store = (function () {
     if (isCloudReady() && currentUser()) {
       const c = cfg();
       const url = c.url.replace(/\/+$/, '') + '/rest/v1/records';
+      await ensureAuth(); // 确保 token 有效
       const res = await fetch(url, {
         method: 'POST',
         headers: Object.assign(authHeaders(), { 'Prefer': 'return=representation' }),
@@ -180,8 +207,30 @@ const Store = (function () {
     }
     const c = cfg();
     const url = c.url.replace(/\/+$/, '') + '/rest/v1/records?id=eq.' + encodeURIComponent(id);
+    await ensureAuth(); // 确保 token 有效
     const res = await fetch(url, { method: 'DELETE', headers: authHeaders() });
     if (!res.ok) throw new Error('删除失败 HTTP ' + res.status);
+  }
+
+  async function updateRecord(id, updates) {
+    if (String(id).startsWith(LOCAL_ID_PREFIX) || !(isCloudReady() && currentUser())) {
+      const list = localAll();
+      const idx = list.findIndex(r => r.id === id);
+      if (idx >= 0) {
+        Object.assign(list[idx], updates);
+        localSave(list);
+      }
+      return;
+    }
+    const c = cfg();
+    const url = c.url.replace(/\/+$/, '') + '/rest/v1/records?id=eq.' + encodeURIComponent(id);
+    await ensureAuth();
+    const res = await fetch(url, {
+      method: 'PATCH',
+      headers: Object.assign(authHeaders(), { 'Content-Type': 'application/json' }),
+      body: JSON.stringify(updates),
+    });
+    if (!res.ok) throw new Error('更新失败 HTTP ' + res.status);
   }
 
   /* 登录后把本地记录合并上云（幂等：云端已有同 日期+类型+名称+kcal 则跳过） */
@@ -212,7 +261,7 @@ const Store = (function () {
     cfg, saveCfg, isCloudReady, currentUser,
     setOnAuthChange,
     signup, signin, signout,
-    listRecords, listMonth, addRecords, deleteRecord,
+    listRecords, listMonth, addRecords, deleteRecord, updateRecord,
     mergeLocalToCloud,
   };
 })();
