@@ -534,11 +534,6 @@
 
   /* ---------- 设置 ---------- */
   function loadConfigForms() {
-    const ai = AI.cfg();
-    $('cfg-ai-url').value = ai.baseUrl;
-    $('cfg-ai-model').value = ai.model;
-    $('cfg-ai-key').value = ai.key;
-
     // 如果已登录，从云端读取用户资料
     if (Store.currentUser()) {
       try {
@@ -569,10 +564,6 @@
   }
 
   function bindSettings() {
-    $('cfg-ai-url').addEventListener('change', saveAiCfg);
-    $('cfg-ai-model').addEventListener('change', saveAiCfg);
-    $('cfg-ai-key').addEventListener('change', saveAiCfg);
-
     $('cfg-weight').addEventListener('change', async e => {
       const w = parseFloat(e.target.value);
       if (w >= 30 && w <= 250) { 
@@ -610,13 +601,6 @@
       }
     });
 
-    $('btn-test-ai').addEventListener('click', async () => {
-      saveAiCfg();
-      $('ai-test-result').textContent = '测试中…';
-      try { $('ai-test-result').textContent = await AI.test(); }
-      catch (err) { $('ai-test-result').textContent = err.message; }
-    });
-
     $('btn-export-excel').addEventListener('click', async () => {
       const m = $('export-month').value;
       if (!m) { toast('请选择月份'); return; }
@@ -631,14 +615,6 @@
         const n = await Exporter.exportJson();
         toast('已备份 ' + n + ' 条记录');
       } catch (e) { toast(e.message); }
-    });
-  }
-
-  function saveAiCfg() {
-    AI.save({
-      baseUrl: $('cfg-ai-url').value.trim() || 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-      model: $('cfg-ai-model').value.trim(),
-      key: $('cfg-ai-key').value.trim(),
     });
   }
 

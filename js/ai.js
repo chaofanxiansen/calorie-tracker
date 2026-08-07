@@ -11,8 +11,8 @@ const AI = (function () {
     try { c = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { c = {}; }
     return {
       baseUrl: c.baseUrl || 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-      model: c.model || 'qwen-vl-max',
-      key: c.key || '',
+      model: c.model || 'qwen3.7-plus',
+      key: c.key || 'sk-ws-H.ERLDLHH.wGb1.MEQCIB-hDXKtiLCBmRIhXl76zYa9qBB1AcdSJ7PB4SO1XLA7AiBUv-vOB_2eykKPrOqQsf4ISTG9TEHM62dFtEFfajxkww',
     };
   }
 

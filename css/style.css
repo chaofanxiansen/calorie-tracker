@@ -282,19 +282,21 @@ a:hover { color: var(--accent-hover); text-decoration-color: currentColor; }
   background: var(--card);
   border-radius: 8px 8px 0 0;
   width: 100%; max-width: 560px;
-  max-height: 82vh;
+  max-height: 85vh;
   display: flex; flex-direction: column;
   box-shadow: 0 -2px 16px rgba(59,61,63,.12);
 }
 .sheet-head {
   display: flex; align-items: center; justify-content: space-between;
   padding: 14px 20px; border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
 }
 .sheet-head h3 { margin: 0; }
-.sheet-body { padding: 16px 20px; overflow-y: auto; }
+.sheet-body { padding: 16px 20px; overflow-y: auto; flex: 1; min-height: 0; }
 .sheet-foot {
   display: flex; align-items: center; justify-content: space-between;
   gap: 12px; padding: 12px 20px; border-top: 1px solid var(--line);
+  flex-shrink: 0;
 }
 
 @media (min-width: 640px) {
