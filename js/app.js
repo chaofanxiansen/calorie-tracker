@@ -147,7 +147,7 @@
     const meals = records.filter(r => r.type === 'meal');
     const groups = {};
     meals.forEach(r => { const k = r.meal || '其他'; (groups[k] = groups[k] || []).push(r); });
-    const mealOrder = ['早餐', '午餐', '晚餐', '加餐', '其他'];
+    const mealOrder = ['早餐', '午餐', '晚餐', '宵夜', '零食', '其他'];
     const mealEl = $('meal-list');
     mealEl.innerHTML = '';
     if (!meals.length) {

@@ -297,6 +297,7 @@ a:hover { color: var(--accent-hover); text-decoration-color: currentColor; }
   display: flex; align-items: center; justify-content: space-between;
   gap: 12px; padding: 12px 20px; border-top: 1px solid var(--line);
   flex-shrink: 0;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
 }
 
 @media (min-width: 640px) {
