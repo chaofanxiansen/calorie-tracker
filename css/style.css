@@ -329,6 +329,8 @@ a:hover { color: var(--accent-hover); text-decoration-color: currentColor; }
 }
 
 #btn-edit-save { margin-left: auto; }
+#btn-meal-save { margin-left: auto; }
+#btn-ex-save { margin-left: auto; }
 
 /* Toast */
 .toast {
