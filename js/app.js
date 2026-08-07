@@ -261,6 +261,11 @@
   /* ---------- 拍照识别 ---------- */
   function bindPhoto() {
     $('btn-photo').addEventListener('click', () => {
+      if (!Store.currentUser()) {
+        toast('请先登录后再使用拍照识别');
+        openAuth();
+        return;
+      }
       if (!AI.isConfigured()) {
         toast('请先在「设置」中配置大模型 API');
         switchView('settings');
