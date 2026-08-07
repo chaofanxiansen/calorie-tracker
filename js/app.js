@@ -533,28 +533,31 @@
   }
 
   /* ---------- 设置 ---------- */
-  async function loadConfigForms() {
+  function loadConfigForms() {
     const ai = AI.cfg();
     $('cfg-ai-url').value = ai.baseUrl;
     $('cfg-ai-model').value = ai.model;
     $('cfg-ai-key').value = ai.key;
 
-    const sb = Store.cfg();
-    $('cfg-sb-url').value = sb.url;
-    $('cfg-sb-key').value = sb.key;
-
     // 如果已登录，从云端读取用户资料
     if (Store.currentUser()) {
       try {
-        const profile = await Store.getProfile();
-        if (profile) {
-          // 同步到 localStorage
-          localStorage.setItem('calorie.gender', profile.gender || 'male');
-          localStorage.setItem('calorie.age', profile.age || '25');
-          localStorage.setItem('calorie.height', profile.height || '170');
-          localStorage.setItem('calorie.weight', profile.weight || '70');
-          localStorage.setItem('calorie.activity', profile.activity || '1.2');
-        }
+        Store.getProfile().then(profile => {
+          if (profile) {
+            // 同步到 localStorage
+            localStorage.setItem('calorie.gender', profile.gender || 'male');
+            localStorage.setItem('calorie.age', profile.age || '25');
+            localStorage.setItem('calorie.height', profile.height || '170');
+            localStorage.setItem('calorie.weight', profile.weight || '70');
+            localStorage.setItem('calorie.activity', profile.activity || '1.2');
+            // 更新表单
+            $('cfg-gender').value = profile.gender || 'male';
+            $('cfg-age').value = profile.age || '25';
+            $('cfg-height').value = profile.height || '170';
+            $('cfg-weight').value = profile.weight || '70';
+            loadToday();
+          }
+        });
       } catch (e) { /* 忽略错误，使用本地数据 */ }
     }
 
@@ -569,8 +572,6 @@
     $('cfg-ai-url').addEventListener('change', saveAiCfg);
     $('cfg-ai-model').addEventListener('change', saveAiCfg);
     $('cfg-ai-key').addEventListener('change', saveAiCfg);
-    $('cfg-sb-url').addEventListener('change', saveSbCfg);
-    $('cfg-sb-key').addEventListener('change', saveSbCfg);
 
     $('cfg-weight').addEventListener('change', async e => {
       const w = parseFloat(e.target.value);
@@ -616,19 +617,6 @@
       catch (err) { $('ai-test-result').textContent = err.message; }
     });
 
-    $('btn-test-sb').addEventListener('click', async () => {
-      saveSbCfg();
-      $('sb-test-result').textContent = '测试中…';
-      try {
-        if (!Store.isCloudReady()) throw new Error('请先填写 URL 和 key');
-        if (Store.currentUser()) {
-          $('sb-test-result').textContent = '连接正常，已登录';
-        } else {
-          $('sb-test-result').textContent = '连接正常，尚未登录（到上方账户区域登录）';
-        }
-      } catch (err) { $('sb-test-result').textContent = err.message; }
-    });
-
     $('btn-export-excel').addEventListener('click', async () => {
       const m = $('export-month').value;
       if (!m) { toast('请选择月份'); return; }
@@ -651,13 +639,6 @@
       baseUrl: $('cfg-ai-url').value.trim() || 'https://dashscope.aliyuncs.com/compatible-mode/v1',
       model: $('cfg-ai-model').value.trim(),
       key: $('cfg-ai-key').value.trim(),
-    });
-  }
-
-  function saveSbCfg() {
-    Store.saveCfg({
-      url: $('cfg-sb-url').value.trim(),
-      key: $('cfg-sb-key').value.trim(),
     });
   }
 

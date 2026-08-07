@@ -13,7 +13,10 @@ const Store = (function () {
   function cfg() {
     let c = {};
     try { c = JSON.parse(localStorage.getItem(CFG_KEY) || '{}'); } catch (e) { c = {}; }
-    return { url: c.url || '', key: c.key || '' };
+    return {
+      url: c.url || 'https://dgacvzaqcgyngadsdkkz.supabase.co',
+      key: c.key || 'sb_publishable_pHc_kDy8FNRmIspbG7yE8g_T9VCNYOM',
+    };
   }
 
   function saveCfg(c) { localStorage.setItem(CFG_KEY, JSON.stringify(c)); }
