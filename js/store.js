@@ -257,11 +257,57 @@ const Store = (function () {
     return toUpload.length;
   }
 
+  /* ---------- 用户资料同步 ---------- */
+
+  async function getProfile() {
+    if (!(isCloudReady() && currentUser())) return null;
+    const c = cfg();
+    const url = c.url.replace(/\/+$/, '') + '/rest/v1/user_profiles?select=*&user_id=eq.' + currentUser().id;
+    await ensureAuth();
+    const res = await fetch(url, { headers: authHeaders() });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.length > 0 ? data[0] : null;
+  }
+
+  async function saveProfile(profile) {
+    if (!(isCloudReady() && currentUser())) return;
+    const c = cfg();
+    const userId = currentUser().id;
+    await ensureAuth();
+
+    // 先尝试更新
+    const updateUrl = c.url.replace(/\/+$/, '') + '/rest/v1/user_profiles?user_id=eq.' + userId;
+    const updateRes = await fetch(updateUrl, {
+      method: 'PATCH',
+      headers: Object.assign(authHeaders(), { 'Content-Type': 'application/json', 'Prefer': 'return=representation' }),
+      body: JSON.stringify({ ...profile, updated_at: new Date().toISOString() }),
+    });
+
+    if (updateRes.ok) {
+      const data = await updateRes.json();
+      if (data.length > 0) return data[0];
+    }
+
+    // 如果没有记录，则插入
+    const insertUrl = c.url.replace(/\/+$/, '') + '/rest/v1/user_profiles';
+    const insertRes = await fetch(insertUrl, {
+      method: 'POST',
+      headers: Object.assign(authHeaders(), { 'Content-Type': 'application/json', 'Prefer': 'return=representation' }),
+      body: JSON.stringify({ user_id: userId, ...profile }),
+    });
+
+    if (!insertRes.ok) throw new Error('保存资料失败');
+    const data = await insertRes.json();
+    return data[0];
+  }
+
   return {
     cfg, saveCfg, isCloudReady, currentUser,
     setOnAuthChange,
     signup, signin, signout,
     listRecords, listMonth, addRecords, deleteRecord, updateRecord,
     mergeLocalToCloud,
+    getProfile, saveProfile,
   };
 })();

@@ -533,7 +533,7 @@
   }
 
   /* ---------- 设置 ---------- */
-  function loadConfigForms() {
+  async function loadConfigForms() {
     const ai = AI.cfg();
     $('cfg-ai-url').value = ai.baseUrl;
     $('cfg-ai-model').value = ai.model;
@@ -542,6 +542,21 @@
     const sb = Store.cfg();
     $('cfg-sb-url').value = sb.url;
     $('cfg-sb-key').value = sb.key;
+
+    // 如果已登录，从云端读取用户资料
+    if (Store.currentUser()) {
+      try {
+        const profile = await Store.getProfile();
+        if (profile) {
+          // 同步到 localStorage
+          localStorage.setItem('calorie.gender', profile.gender || 'male');
+          localStorage.setItem('calorie.age', profile.age || '25');
+          localStorage.setItem('calorie.height', profile.height || '170');
+          localStorage.setItem('calorie.weight', profile.weight || '70');
+          localStorage.setItem('calorie.activity', profile.activity || '1.2');
+        }
+      } catch (e) { /* 忽略错误，使用本地数据 */ }
+    }
 
     $('cfg-gender').value = localStorage.getItem('calorie.gender') || 'male';
     $('cfg-age').value = localStorage.getItem('calorie.age') || '25';
@@ -557,25 +572,41 @@
     $('cfg-sb-url').addEventListener('change', saveSbCfg);
     $('cfg-sb-key').addEventListener('change', saveSbCfg);
 
-    $('cfg-weight').addEventListener('change', e => {
+    $('cfg-weight').addEventListener('change', async e => {
       const w = parseFloat(e.target.value);
-      if (w >= 30 && w <= 250) { localStorage.setItem('calorie.weight', w); toast('体重已保存'); loadToday(); }
+      if (w >= 30 && w <= 250) { 
+        localStorage.setItem('calorie.weight', w); 
+        toast('体重已保存'); 
+        await syncProfileToCloud();
+        loadToday(); 
+      }
     });
 
-    $('cfg-gender').addEventListener('change', e => {
+    $('cfg-gender').addEventListener('change', async e => {
       localStorage.setItem('calorie.gender', e.target.value);
       toast('性别已保存');
+      await syncProfileToCloud();
       loadToday();
     });
 
-    $('cfg-age').addEventListener('change', e => {
+    $('cfg-age').addEventListener('change', async e => {
       const age = parseInt(e.target.value);
-      if (age >= 10 && age <= 120) { localStorage.setItem('calorie.age', age); toast('年龄已保存'); loadToday(); }
+      if (age >= 10 && age <= 120) { 
+        localStorage.setItem('calorie.age', age); 
+        toast('年龄已保存'); 
+        await syncProfileToCloud();
+        loadToday(); 
+      }
     });
 
-    $('cfg-height').addEventListener('change', e => {
+    $('cfg-height').addEventListener('change', async e => {
       const h = parseFloat(e.target.value);
-      if (h >= 100 && h <= 250) { localStorage.setItem('calorie.height', h); toast('身高已保存'); loadToday(); }
+      if (h >= 100 && h <= 250) { 
+        localStorage.setItem('calorie.height', h); 
+        toast('身高已保存'); 
+        await syncProfileToCloud();
+        loadToday(); 
+      }
     });
 
     $('btn-test-ai').addEventListener('click', async () => {
@@ -628,6 +659,23 @@
       url: $('cfg-sb-url').value.trim(),
       key: $('cfg-sb-key').value.trim(),
     });
+  }
+
+  /* 同步用户资料到云端 */
+  async function syncProfileToCloud() {
+    if (!Store.currentUser()) return;
+    const profile = {
+      gender: localStorage.getItem('calorie.gender') || 'male',
+      age: parseInt(localStorage.getItem('calorie.age') || '25'),
+      height: parseFloat(localStorage.getItem('calorie.height') || '170'),
+      weight: parseFloat(localStorage.getItem('calorie.weight') || '70'),
+      activity: parseFloat(localStorage.getItem('calorie.activity') || '1.2'),
+    };
+    try {
+      await Store.saveProfile(profile);
+    } catch (e) {
+      console.warn('同步资料到云端失败:', e.message);
+    }
   }
 
   function renderAccount() {
@@ -710,6 +758,8 @@
         renderAccount();
         const n = await Store.mergeLocalToCloud();
         if (n) toast('已同步 ' + n + ' 条本地记录');
+        // 登录后从云端读取用户资料
+        await loadConfigForms();
         loadToday();
       } catch (e) {
         $('auth-msg').textContent = e.message;
