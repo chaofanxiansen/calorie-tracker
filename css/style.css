@@ -328,6 +328,8 @@ a:hover { color: var(--accent-hover); text-decoration-color: currentColor; }
   font-size: .9rem; color: var(--accent-hover);
 }
 
+#btn-edit-save { margin-left: auto; }
+
 /* Toast */
 .toast {
   position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
