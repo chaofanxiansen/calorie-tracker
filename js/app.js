@@ -114,7 +114,7 @@
     if (name === 'today') loadToday();
     if (name === 'history') loadHistory();
     if (name === 'stats') loadStats();
-    if (name === 'settings') renderAccount();
+    if (name === 'settings') { renderAccount(); pullProfileFromCloud(); }
   }
 
   /* ---------- 渲染：今日 ---------- */
@@ -538,29 +538,27 @@
   }
 
   /* ---------- 设置 ---------- */
-  function loadConfigForms() {
-    // 如果已登录，从云端读取用户资料
-    if (Store.currentUser()) {
-      try {
-        Store.getProfile().then(profile => {
-          if (profile) {
-            // 同步到 localStorage
-            localStorage.setItem('calorie.gender', profile.gender || 'male');
-            localStorage.setItem('calorie.age', profile.age || '25');
-            localStorage.setItem('calorie.height', profile.height || '170');
-            localStorage.setItem('calorie.weight', profile.weight || '70');
-            localStorage.setItem('calorie.activity', profile.activity || '1.2');
-            // 更新表单
-            $('cfg-gender').value = profile.gender || 'male';
-            $('cfg-age').value = profile.age || '25';
-            $('cfg-height').value = profile.height || '170';
-            $('cfg-weight').value = profile.weight || '70';
-            loadToday();
-          }
-        });
-      } catch (e) { /* 忽略错误，使用本地数据 */ }
-    }
+  /* 以云端为准：登录后强制从云端拉取并覆盖本地（性别/年龄/身高/体重/活动系数） */
+  async function pullProfileFromCloud() {
+    if (!Store.currentUser()) return;
+    try {
+      const profile = await Store.getProfile();
+      if (profile) {
+        localStorage.setItem('calorie.gender', profile.gender || 'male');
+        localStorage.setItem('calorie.age', profile.age || '25');
+        localStorage.setItem('calorie.height', profile.height || '170');
+        localStorage.setItem('calorie.weight', profile.weight || '70');
+        localStorage.setItem('calorie.activity', profile.activity || '1.2');
+        $('cfg-gender').value = profile.gender || 'male';
+        $('cfg-age').value = profile.age || '25';
+        $('cfg-height').value = profile.height || '170';
+        $('cfg-weight').value = profile.weight || '70';
+        loadToday();
+      }
+    } catch (e) { /* 网络失败时保持本地数据 */ }
+  }
 
+  function loadConfigForms() {
     $('cfg-gender').value = localStorage.getItem('calorie.gender') || 'male';
     $('cfg-age').value = localStorage.getItem('calorie.age') || '25';
     $('cfg-height').value = localStorage.getItem('calorie.height') || '170';
@@ -720,8 +718,9 @@
         renderAccount();
         const n = await Store.mergeLocalToCloud();
         if (n) toast('已同步 ' + n + ' 条本地记录');
-        // 登录后从云端读取用户资料
-        await loadConfigForms();
+        // 以云端为准：登录后强制从云端覆盖本地个人数据
+        await pullProfileFromCloud();
+        loadConfigForms();
         loadToday();
       } catch (e) {
         $('auth-msg').textContent = e.message;
@@ -765,6 +764,10 @@
 
     Store.setOnAuthChange(updateLoginTag);
     updateLoginTag();
+    if (Store.currentUser()) {
+      pullProfileFromCloud();          // 个人信息：云端覆盖本地
+      Store.mergeLocalToCloud();       // 卡路里记录：补传本地新记录到云端（不覆盖云端）
+    }
     switchView('today');
   });
 
