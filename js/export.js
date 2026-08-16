@@ -34,15 +34,20 @@ const Exporter = (function () {
     /* 明细行 */
     const detailRows = [[
       { v: '日期', s: 1 }, { v: '类型', s: 1 }, { v: '餐次', s: 1 },
-      { v: '名称', s: 1 }, { v: '卡路里(kcal)', s: 1 }, { v: '备注', s: 1 },
+      { v: '名称', s: 1 }, { v: '卡路里(kcal)', s: 1 },
+      { v: '蛋白质(g)', s: 1 }, { v: '碳水(g)', s: 1 }, { v: '脂肪(g)', s: 1 }, { v: '备注', s: 1 },
     ]];
     records.forEach(r => {
+      const d = r.detail || {};
       detailRows.push([
         { v: fmtDate(r.record_date) },
         { v: typeLabel(r) },
         { v: r.meal || '' },
         { v: r.name },
         { v: r.kcal, t: 'n' },
+        { v: Number(d.protein) || 0, t: 'n' },
+        { v: Number(d.carbs) || 0, t: 'n' },
+        { v: Number(d.fat) || 0, t: 'n' },
         { v: detailText(r) },
       ]);
     });
@@ -64,7 +69,7 @@ const Exporter = (function () {
     });
 
     const bytes = XLSX_JS.buildWorkbook([
-      { name: '每日明细', cols: [12, 7, 8, 22, 13, 26], rows: detailRows },
+      { name: '每日明细', cols: [12, 7, 8, 22, 13, 10, 10, 10, 26], rows: detailRows },
       { name: '每日汇总', cols: [12, 12, 12, 14], rows: sumRows },
     ]);
 

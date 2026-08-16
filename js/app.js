@@ -181,9 +181,16 @@
   function recordRow(r) {
     const row = document.createElement('div');
     row.className = 'record';
-    const meta = r.type === 'meal'
-      ? (r.detail && r.detail.portion ? r.detail.portion : '')
-      : (r.detail && r.detail.minutes ? r.detail.minutes + ' 分钟' : '');
+    const d = r.detail || {};
+    let meta = '';
+    if (r.type === 'meal') {
+      const parts = [];
+      if (d.portion) parts.push(d.portion);
+      if (d.protein || d.carbs || d.fat) parts.push('P ' + Number(d.protein || 0) + 'g · C ' + Number(d.carbs || 0) + 'g · F ' + Number(d.fat || 0) + 'g');
+      meta = parts.join(' · ');
+    } else {
+      meta = d.minutes ? d.minutes + ' 分钟' : '';
+    }
     row.innerHTML =
       '<div class="record-main">' +
       '<div class="record-name">' + esc(r.name) + '</div>' +
@@ -311,9 +318,11 @@
     state.aiPending.forEach((it, idx) => {
       const item = document.createElement('div');
       item.className = 'ai-item';
+      const macro = (it.protein || it.carbs || it.fat)
+        ? '<div class="pt">' + esc(it.portion || '分量未知') + ' · P ' + it.protein + 'g / C ' + it.carbs + 'g / F ' + it.fat + 'g</div>'
+        : '<div class="pt">' + esc(it.portion || '分量未知') + '</div>';
       item.innerHTML =
-        '<div class="ai-name"><div class="nm">' + esc(it.name) + '</div>' +
-        '<div class="pt">' + esc(it.portion || '分量未知') + '</div></div>' +
+        '<div class="ai-name"><div class="nm">' + esc(it.name) + '</div>' + macro + '</div>' +
         '<span class="ai-kcal-label">kcal</span>' +
         '<input type="number" min="0" step="1" value="' + it.kcal + '">' +
         '<button class="record-del" title="移除" aria-label="移除">×</button>';
@@ -345,7 +354,12 @@
         meal,
         name: it.name,
         kcal: it.kcal,
-        detail: { portion: it.portion },
+        detail: {
+          portion: it.portion,
+          protein: it.protein || 0,
+          carbs: it.carbs || 0,
+          fat: it.fat || 0,
+        },
       }));
       try {
         await Store.addRecords(records);

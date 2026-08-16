@@ -29,11 +29,12 @@ const AI = (function () {
 1. 食物名称（中文）
 2. 大致分量（克或碗/份等日常单位）
 3. 该分量对应的卡路里（千卡/kcal）
+4. 该分量对应的蛋白质（克/g）、碳水化合物（克/g）、脂肪（克/g）
 
 要求：
 - 只输出 JSON，不要任何多余文字或 markdown 代码块标记
-- JSON 结构为 {"items":[{"name":"食物名","portion":"150克","kcal":220}],"total":220,"note":"简短备注"}
-- kcal 为整数，total 为各项之和
+- JSON 结构为 {"items":[{"name":"食物名","portion":"150克","kcal":220,"protein":8.5,"carbs":42.3,"fat":2.1}],"total":220,"note":"简短备注"}
+- kcal 为整数，total 为各项之和；protein/carbs/fat 为克数，保留一位小数，无法确定时给合理估算值
 - 识别不清或图片中没有食物时，items 返回空数组，note 说明原因`;
 
   /* 识别一张餐食图片，返回 {items, total, note, raw} */
@@ -82,13 +83,26 @@ const AI = (function () {
       const cleaned = String(content).replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
       parsed = JSON.parse(cleaned);
     } catch (e) {
-      throw new Error('识别结果解析失败，请重试或手动添加');
+      // 容错：直接解析失败时，用正则提取 JSON 块（兼容模型输出带前后缀的情况）
+      const m = String(content).match(/\{[\s\S]*\}/);
+      if (m) {
+        try {
+          parsed = JSON.parse(m[0]);
+        } catch (e2) {
+          throw new Error('识别结果解析失败，请重试或手动添加');
+        }
+      } else {
+        throw new Error('识别结果解析失败，请重试或手动添加');
+      }
     }
 
     const items = Array.isArray(parsed.items) ? parsed.items.map(it => ({
       name: String(it.name || '未知食物'),
       portion: String(it.portion || ''),
       kcal: Math.max(0, Math.round(Number(it.kcal) || 0)),
+      protein: Math.max(0, Number(it.protein) || 0),
+      carbs: Math.max(0, Number(it.carbs) || 0),
+      fat: Math.max(0, Number(it.fat) || 0),
     })) : [];
 
     const total = Math.round(Number(parsed.total) || items.reduce((s, it) => s + it.kcal, 0));
