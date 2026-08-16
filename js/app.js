@@ -58,6 +58,18 @@
     return Math.round(bmr * activity);
   }
 
+  /* 宏量营养素建议摄入（克）：
+     蛋白 = 体重 × 1.5g/kg；碳水 = TDEE × 50% 供能 ÷ 4；脂肪 = TDEE × 25% 供能 ÷ 9 */
+  function calcMacroRecommend() {
+    const tdee = calcTDEE();
+    if (tdee === 0) return { protein: 0, carbs: 0, fat: 0 };
+    return {
+      protein: Math.round(getWeight() * 1.5),
+      carbs: Math.round(tdee * 0.5 / 4),
+      fat: Math.round(tdee * 0.25 / 9),
+    };
+  }
+
   let toastTimer = null;
   function toast(msg) {
     const el = $('toast');
@@ -142,6 +154,38 @@
     netEl.textContent = (net > 0 ? '+' : '') + net;
     netEl.className = 'metric-value' + (net > 0 ? ' positive' : net < 0 ? ' negative' : '');
     $('m-tdee').textContent = tdee || '--';
+
+    /* 宏量营养素：摄入（meal 汇总），消耗（运动总热量按供能比折算，估算），净余额，建议 */
+    const meals = records.filter(r => r.type === 'meal');
+    const pIn = meals.reduce((s, r) => s + Number((r.detail && r.detail.protein) || 0), 0);
+    const cIn = meals.reduce((s, r) => s + Number((r.detail && r.detail.carbs) || 0), 0);
+    const fIn = meals.reduce((s, r) => s + Number((r.detail && r.detail.fat) || 0), 0);
+
+    const pBurn = burn * 0.15 / 4;  /* 供能比估算：蛋白 15%，碳水 55%，脂肪 30% */
+    const cBurn = burn * 0.55 / 4;
+    const fBurn = burn * 0.30 / 9;
+
+    const rec = calcMacroRecommend();
+
+    fillMacro('mp', pIn, pBurn, rec.protein);
+    fillMacro('mc', cIn, cBurn, rec.carbs);
+    fillMacro('mf', fIn, fBurn, rec.fat);
+  }
+
+  /* 填充宏量营养素四格 */
+  function fillMacro(prefix, intake, burn, rec) {
+    const net = intake - burn;
+    const set = (suffix, val, cls) => {
+      const el = $(prefix + '-' + suffix);
+      if (!el) return;
+      el.textContent = Math.round(val);
+      el.className = 'macro-val' + (cls ? ' ' + cls : '');
+    };
+    set('intake', intake);
+    set('burn', burn);
+    set('net', net, net > 0 ? 'positive' : net < 0 ? 'negative' : '');
+    set('rec', rec);
+  }
 
     /* 饮食列表，按餐次分组 */
     const meals = records.filter(r => r.type === 'meal');
