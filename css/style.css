@@ -140,33 +140,32 @@ a:hover { color: var(--accent-hover); text-decoration-color: currentColor; }
 .metric-value.negative { color: var(--danger); }
 .metric-unit { font-size: .75rem; color: var(--ink-3); font-family: var(--ui); }
 
-/* 宏量营养素 */
-.macro-section {
-  display: flex; flex-direction: column; gap: 8px;
+/* 宏量营养素：独立小卡片横向排列 */
+.macro-grid {
+  display: flex; flex-wrap: wrap; gap: 10px;
   margin: 0 0 1.4em;
 }
-.macro-group {
-  background: var(--card);
+.mcard {
+  flex: 1 1 130px; min-width: 0;
   border: 1px solid var(--line);
   border-radius: 4px;
-  padding: .6rem .9rem;
-  display: grid;
-  grid-template-columns: 56px repeat(4, 1fr);
-  gap: 8px;
-  align-items: center;
+  padding: .7rem .9rem;
 }
-.macro-name { font-size: .85rem; font-weight: 500; color: var(--ink); }
-.macro-cell { display: flex; flex-direction: column; min-width: 0; }
-.macro-label { font-size: .68rem; color: var(--ink-3); font-family: var(--ui); }
-.macro-val { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: .95rem; color: var(--accent-hover); line-height: 1.3; }
-.macro-val.positive { color: var(--green); }
-.macro-val.negative { color: var(--danger); }
-.macro-unit { font-size: .65rem; color: var(--ink-3); }
+.mcard.p { background: rgba(83,125,150,.06); }
+.mcard.c { background: rgba(157,95,77,.06); }
+.mcard.f { background: rgba(74,107,74,.06); }
+.mcard-label { font-size: .72rem; color: var(--ink-2); font-family: var(--ui); letter-spacing: .01em; }
+.mcard-val {
+  font-family: var(--mono); font-variant-numeric: tabular-nums;
+  font-size: 1.3rem; color: var(--accent-hover); line-height: 1.3;
+}
+.mcard-val.positive { color: var(--green); }
+.mcard-val.negative { color: var(--danger); }
+.mcard-unit { font-size: .72rem; color: var(--ink-3); }
 
 @media (max-width: 480px) {
-  .macro-group { grid-template-columns: 48px repeat(4, 1fr); gap: 4px; padding: .5rem .6rem; }
-  .macro-val { font-size: .85rem; }
-  .macro-name { font-size: .78rem; }
+  .mcard { flex: 1 1 calc(50% - 10px); padding: .55rem .7rem; }
+  .mcard-val { font-size: 1.1rem; }
 }
 
 /* 面板 */

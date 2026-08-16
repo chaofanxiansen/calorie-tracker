@@ -179,7 +179,7 @@
       const el = $(prefix + '-' + suffix);
       if (!el) return;
       el.textContent = Math.round(val);
-      el.className = 'macro-val' + (cls ? ' ' + cls : '');
+      el.className = 'mcard-val' + (cls ? ' ' + cls : '');
     };
     set('intake', intake);
     set('burn', burn);
