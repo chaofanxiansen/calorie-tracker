@@ -790,7 +790,7 @@
   }
 
   /* ---------- 初始化 ---------- */
-  document.addEventListener('DOMContentLoaded', () => {
+  function init() {
     fillExerciseSelect();
     bindPhoto();
     bindAiConfirm();
@@ -825,6 +825,12 @@
       Store.mergeLocalToCloud();       // 卡路里记录：补传本地新记录到云端（不覆盖云端）
     }
     switchView('today');
-  });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 
 })();
