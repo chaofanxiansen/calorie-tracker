@@ -172,7 +172,6 @@
     fillMacro('mf', fIn, fBurn, rec.fat);
 
     /* 饮食列表，按餐次分组 */
-    const meals = records.filter(r => r.type === 'meal');
     const groups = {};
     meals.forEach(r => { const k = r.meal || '其他'; (groups[k] = groups[k] || []).push(r); });
     const mealOrder = ['早餐', '午餐', '晚餐', '宵夜', '零食', '其他'];
