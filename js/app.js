@@ -170,22 +170,6 @@
     fillMacro('mp', pIn, pBurn, rec.protein);
     fillMacro('mc', cIn, cBurn, rec.carbs);
     fillMacro('mf', fIn, fBurn, rec.fat);
-  }
-
-  /* 填充宏量营养素四格 */
-  function fillMacro(prefix, intake, burn, rec) {
-    const net = intake - burn;
-    const set = (suffix, val, cls) => {
-      const el = $(prefix + '-' + suffix);
-      if (!el) return;
-      el.textContent = Math.round(val);
-      el.className = 'mcard-val' + (cls ? ' ' + cls : '');
-    };
-    set('intake', intake);
-    set('burn', burn);
-    set('net', net, net > 0 ? 'positive' : net < 0 ? 'negative' : '');
-    set('rec', rec);
-  }
 
     /* 饮食列表，按餐次分组 */
     const meals = records.filter(r => r.type === 'meal');
@@ -220,6 +204,21 @@
     } else {
       exs.forEach(r => exEl.appendChild(recordRow(r)));
     }
+  }
+
+  /* 填充宏量营养素四格 */
+  function fillMacro(prefix, intake, burn, rec) {
+    const net = intake - burn;
+    const set = (suffix, val, cls) => {
+      const el = $(prefix + '-' + suffix);
+      if (!el) return;
+      el.textContent = Math.round(val);
+      el.className = 'mcard-val' + (cls ? ' ' + cls : '');
+    };
+    set('intake', intake);
+    set('burn', burn);
+    set('net', net, net > 0 ? 'positive' : net < 0 ? 'negative' : '');
+    set('rec', rec);
   }
 
   function recordRow(r) {
