@@ -118,11 +118,13 @@ a:hover { color: var(--accent-hover); text-decoration-color: currentColor; }
 
 /* 指标 */
 .metrics {
-  display: flex; gap: 12px; flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
   margin: 1.2em 0 1.4em;
 }
 .metric {
-  flex: 1 1 140px; min-width: 0;
+  min-width: 0;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 4px;
@@ -140,13 +142,15 @@ a:hover { color: var(--accent-hover); text-decoration-color: currentColor; }
 .metric-value.negative { color: var(--danger); }
 .metric-unit { font-size: .75rem; color: var(--ink-3); font-family: var(--ui); }
 
-/* 宏量营养素：独立小卡片横向排列 */
+/* 宏量营养素：独立小卡片，4格一排（固定列） */
 .macro-grid {
-  display: flex; flex-wrap: wrap; gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
   margin: 0 0 1.4em;
 }
 .mcard {
-  flex: 1 1 130px; min-width: 0;
+  min-width: 0;
   border: 1px solid var(--line);
   border-radius: 4px;
   padding: .7rem .9rem;
@@ -164,7 +168,8 @@ a:hover { color: var(--accent-hover); text-decoration-color: currentColor; }
 .mcard-unit { font-size: .72rem; color: var(--ink-3); }
 
 @media (max-width: 480px) {
-  .mcard { flex: 1 1 calc(50% - 10px); padding: .55rem .7rem; }
+  .macro-grid { grid-template-columns: repeat(2, 1fr); }
+  .mcard { padding: .55rem .7rem; }
   .mcard-val { font-size: 1.1rem; }
 }
 
@@ -377,5 +382,7 @@ a:hover { color: var(--accent-hover); text-decoration-color: currentColor; }
 @media (max-width: 520px) {
   .header-inner { justify-content: center; }
   .nav { width: 100%; justify-content: space-around; }
+  .metrics { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .metric { padding: .7rem .8rem .6rem; }
   .metric-value { font-size: 1.4rem; }
 }
